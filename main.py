@@ -19,7 +19,6 @@ intents.guilds = True
 intents.members = True
 intents.presences = True
 intents.moderation = True
-intents.bans = True
 
 bot = commands.Bot(command_prefix=['!', '?', '$', '.'], intents=intents, help_command=None)
 
@@ -44,7 +43,8 @@ def load_guild_settings(guild_id):
             "log_channel": None,
             "auto_role": None,
             "banned_words": [],
-            "max_channels_per_user": 3
+            "max_channels_per_user": 3,
+            "trigger_channels": []  # List of channel IDs that trigger auto-creation
         }
     return guild_settings[guild_id]
 
@@ -82,6 +82,12 @@ async def on_voice_state_update(member, before, after):
     guild_config = load_guild_settings(member.guild.id)
     if not guild_config["auto_voice"]:
         return
+    
+    # Check if joining a trigger channel (admin-controlled)
+    if after.channel and not before.channel:
+        # If no trigger channels are set, any voice channel works (old behavior)
+        if guild_config["trigger_channels"] and after.channel.id not in guild_config["trigger_channels"]:
+            return  # Only create channels when joining specific trigger channels
     
     # Track user stats
     if member.id not in user_stats:
@@ -210,7 +216,8 @@ async def setup_bot(ctx):
             "• `!setwelcome #channel` - Set welcome channel\n"
             "• `!setlogs #channel` - Set moderation logs channel\n"
             "• `!autorole @role` - Set auto-role for new members\n"
-            "• `!voicesettings` - Configure voice channel settings"
+            "• `!voicesettings` - Configure voice channel settings\n"
+            "• `!settrigger #voicechannel` - Set trigger channels for auto-creation"
         ),
         inline=False
     )
@@ -239,6 +246,118 @@ async def setup_bot(ctx):
     
     embed.set_footer(text=f"Administrator Setup • {ctx.guild.name}", icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
     await ctx.send(embed=embed)
+
+@bot.command(name='settrigger', aliases=['addtrigger'])
+@has_admin_permissions()
+async def set_trigger_channel(ctx, channel: discord.VoiceChannel):
+    """Set a voice channel as trigger for auto-creation"""
+    settings = load_guild_settings(ctx.guild.id)
+    
+    if channel.id not in settings["trigger_channels"]:
+        settings["trigger_channels"].append(channel.id)
+        embed = discord.Embed(
+            title="✅ Trigger Channel Added",
+            description=f"Users joining {channel.mention} will now get personal voice channels created automatically!",
+            color=discord.Color.green()
+        )
+    else:
+        embed = discord.Embed(
+            title="⚠️ Already Set",
+            description=f"{channel.mention} is already a trigger channel!",
+            color=discord.Color.orange()
+        )
+    
+    await ctx.send(embed=embed)
+    await log_action(ctx.guild, f"🎵 Trigger channel set: {channel.mention} by {ctx.author.mention}")
+
+@bot.command(name='removetrigger', aliases=['deltrigger'])
+@has_admin_permissions()
+async def remove_trigger_channel(ctx, channel: discord.VoiceChannel):
+    """Remove a voice channel from trigger list"""
+    settings = load_guild_settings(ctx.guild.id)
+    
+    if channel.id in settings["trigger_channels"]:
+        settings["trigger_channels"].remove(channel.id)
+        embed = discord.Embed(
+            title="✅ Trigger Channel Removed",
+            description=f"{channel.mention} is no longer a trigger channel.",
+            color=discord.Color.green()
+        )
+    else:
+        embed = discord.Embed(
+            title="❌ Not Found",
+            description=f"{channel.mention} was not a trigger channel!",
+            color=discord.Color.red()
+        )
+    
+    await ctx.send(embed=embed)
+
+@bot.command(name='listtriggers', aliases=['triggers'])
+@has_admin_permissions()
+async def list_trigger_channels(ctx):
+    """List all trigger channels"""
+    settings = load_guild_settings(ctx.guild.id)
+    
+    embed = discord.Embed(
+        title="🎵 Voice Trigger Channels",
+        color=discord.Color.blue(),
+        timestamp=datetime.datetime.now()
+    )
+    
+    if not settings["trigger_channels"]:
+        embed.add_field(
+            name="📋 Current Mode",
+            value="**ALL VOICE CHANNELS** - Any voice channel triggers auto-creation",
+            inline=False
+        )
+        embed.add_field(
+            name="💡 How to Change",
+            value="Use `!settrigger #voicechannel` to set specific trigger channels",
+            inline=False
+        )
+    else:
+        trigger_list = []
+        for channel_id in settings["trigger_channels"]:
+            channel = ctx.guild.get_channel(channel_id)
+            if channel:
+                trigger_list.append(f"• {channel.mention}")
+            else:
+                # Remove invalid channel
+                settings["trigger_channels"].remove(channel_id)
+        
+        embed.add_field(
+            name="📋 Active Trigger Channels",
+            value="\n".join(trigger_list) if trigger_list else "No valid trigger channels found",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="💡 Commands",
+            value=(
+                "• `!settrigger #channel` - Add trigger channel\n"
+                "• `!removetrigger #channel` - Remove trigger channel\n"
+                "• `!cleartriggers` - Remove all (back to any channel mode)"
+            ),
+            inline=False
+        )
+    
+    await ctx.send(embed=embed)
+
+@bot.command(name='cleartriggers')
+@has_admin_permissions()
+async def clear_trigger_channels(ctx):
+    """Clear all trigger channels (back to any channel mode)"""
+    settings = load_guild_settings(ctx.guild.id)
+    settings["trigger_channels"] = []
+    
+    embed = discord.Embed(
+        title="✅ Triggers Cleared",
+        description="Voice channels will now be created when users join **ANY** voice channel!",
+        color=discord.Color.green()
+    )
+    
+    await ctx.send(embed=embed)
+    await log_action(ctx.guild, f"🎵 All trigger channels cleared by {ctx.author.mention}")
 
 @bot.command(name='setwelcome')
 @has_admin_permissions()
@@ -296,11 +415,14 @@ async def voice_settings(ctx, action: str = None, value: int = None):
         )
         embed.add_field(name="Auto Voice", value="✅ Enabled" if settings["auto_voice"] else "❌ Disabled", inline=True)
         embed.add_field(name="Max Channels per User", value=f"{settings['max_channels_per_user']}", inline=True)
+        embed.add_field(name="Trigger Channels", value=f"{len(settings['trigger_channels'])} set" if settings['trigger_channels'] else "All channels", inline=True)
         embed.add_field(
             name="Commands",
             value=(
                 "`!voicesettings toggle` - Enable/disable auto voice\n"
-                "`!voicesettings limit <number>` - Set channel limit per user"
+                "`!voicesettings limit <number>` - Set channel limit per user\n"
+                "`!listtriggers` - Show trigger channels\n"
+                "`!settrigger #channel` - Add trigger channel"
             ),
             inline=False
         )
@@ -430,7 +552,7 @@ async def timeout_member(ctx, member: discord.Member, duration: int = 60, *, rea
         duration = 10080
     
     try:
-        timeout_until = datetime.datetime.now() + datetime.timedelta(minutes=duration)
+        timeout_until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=duration)
         await member.timeout(timeout_until, reason=f"Muted by {ctx.author}: {reason}")
         
         embed = discord.Embed(
@@ -690,6 +812,17 @@ async def enhanced_help(ctx):
         )
         
         embed.add_field(
+            name="🎵 **VOICE TRIGGER CONTROL**",
+            value=(
+                "• `!settrigger #voicechannel` - Set specific trigger channel\n"
+                "• `!removetrigger #voicechannel` - Remove trigger channel\n"
+                "• `!listtriggers` - Show all trigger channels\n"
+                "• `!cleartriggers` - Reset to any-channel mode"
+            ),
+            inline=False
+        )
+        
+        embed.add_field(
             name="🛡️ **MODERATION**",
             value=(
                 "• `!purge <amount>` - Delete messages (1-100)\n"
@@ -714,14 +847,14 @@ async def enhanced_help(ctx):
         )
     
     embed.add_field(
-        name="🎵 **AUTO VOICE SYSTEM** ⭐",
+        name="🎵 **SMART VOICE SYSTEM** ⭐",
         value=(
-            "• Join any voice channel → Personal room created!\n"
-            "• Auto-deletion when empty (5min delay)\n"
-            "• 128kbps high-quality audio\n"
-            "• Smart naming system with 10+ variants\n"
-            "• User limits and tracking system\n"
-            "• Full administrator control"
+            "• **Admin Control:** Set specific trigger channels!\n"
+            "• **Auto-Creation:** Join trigger → Get personal room\n"
+            "• **Auto-Deletion:** Empty for 5min → Deleted\n"
+            "• **High Quality:** 128kbps audio, 10 user limit\n"
+            "• **Smart Names:** 10+ creative channel variants\n"
+            "• **User Tracking:** Statistics and limits"
         ),
         inline=False
     )
@@ -752,7 +885,7 @@ async def enhanced_help(ctx):
         name="🔧 **PREFIXES & FEATURES**",
         value=(
             "**Prefixes:** `!`, `?`, `$`, `.`\n"
-            "**Auto-Features:** Voice channels, Welcome messages\n"
+            "**Auto-Features:** Smart voice channels, Welcome messages\n"
             "**Security:** Admin-only commands, Permission checks\n"
             "**Monitoring:** Activity tracking, Usage statistics"
         ),
@@ -760,14 +893,12 @@ async def enhanced_help(ctx):
     )
     
     embed.add_field(
-        name="💡 **PRO TIPS**",
+        name="💡 **VOICE SYSTEM USAGE**",
         value=(
-            "• All admin commands require Administrator permission\n"
-            "• Voice channels auto-manage with 5min empty timeout\n"
-            "• Bot tracks detailed usage statistics\n"
-            "• Dynamic status updates every 30 seconds\n"
-            "• Full logging system for moderation actions\n"
-            "• Advanced member analysis and server insights"
+            "• **Any Channel Mode:** All voice channels trigger creation\n"
+            "• **Trigger Mode:** Only admin-set channels trigger creation\n"
+            "• **Commands:** Use `!listtriggers` to see current setup\n"
+            "• **Smart Control:** Admins decide which channels work!"
         ),
         inline=False
     )
@@ -879,11 +1010,11 @@ async def bot_stats(ctx):
     
     embed.add_field(name="📊 Total Channels Created", value=f"{sum(stats['channels_created'] for stats in user_stats.values()):,}", inline=True)
     embed.add_field(name="⚡ Latency", value=f"{round(bot.latency * 1000)}ms", inline=True)
-    embed.add_field(name="💻 Commands Available", value="25+", inline=True)
+    embed.add_field(name="💻 Commands Available", value="30+", inline=True)
     
-    embed.add_field(name="🔥 Features", value="• Auto Voice Channels\n• Advanced Moderation\n• Admin Management\n• Activity Tracking\n• Smart Logging", inline=True)
+    embed.add_field(name="🔥 Features", value="• Smart Voice Channels\n• Admin Trigger Control\n• Advanced Moderation\n• Admin Management\n• Activity Tracking", inline=True)
     embed.add_field(name="⏱️ Uptime", value="Since last restart", inline=True)
-    embed.add_field(name="🚀 Version", value="v2.0 - Management Edition", inline=True)
+    embed.add_field(name="🚀 Version", value="v2.0 - Smart Management", inline=True)
     
     await ctx.send(embed=embed)
 
@@ -953,6 +1084,7 @@ if __name__ == "__main__":
         print("🚀 Starting Amazing Management Bot v2.0...")
         print("🔑 Using embedded token...")
         print("👑 Admin features enabled...")
+        print("🎵 Smart voice trigger system ready...")
         bot.run(TOKEN)
     except discord.HTTPException as e:
         if e.status == 429:
