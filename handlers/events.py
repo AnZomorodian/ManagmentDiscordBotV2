@@ -1,10 +1,8 @@
-
 import discord
 from discord.ext import commands
 import asyncio
 import random
 from config.settings import VOICE_SETTINGS, CHANNEL_NAMES, COLORS, DEFAULT_GUILD_SETTINGS
-from utils.database import load_guild_settings, save_guild_settings, add_moderation_log
 from utils.helpers import create_embed, log_action
 
 def setup_events(bot):
@@ -18,7 +16,6 @@ def setup_events(bot):
         
         # Initialize guild settings
         settings = DEFAULT_GUILD_SETTINGS.copy()
-        save_guild_settings(guild.id, settings)
         
         # Send welcome message to system channel
         if guild.system_channel:
@@ -48,87 +45,59 @@ def setup_events(bot):
         if member.bot:
             return
             
-        guild_settings = load_guild_settings(member.guild.id)
-        if not guild_settings.get("auto_voice", True):
-            return
-            
-        trigger_channels = guild_settings.get("trigger_channels", [])
-        max_channels = guild_settings.get("max_channels_per_user", 3)
-        
         # User joined a trigger channel
-        if after.channel and after.channel.id in trigger_channels:
-            try:
-                # Check user's current channel count
-                user_channels = [
-                    channel for channel in member.guild.voice_channels
-                    if channel.name.startswith(member.display_name) or 
-                       member.display_name in channel.name
-                ]
-                
-                if len(user_channels) >= max_channels:
-                    return
-                
-                # Create new voice channel
-                channel_name = random.choice(CHANNEL_NAMES).format(member.display_name)
-                voice_quality = guild_settings.get("voice_quality", "high")
-                bitrate = VOICE_SETTINGS["VOICE_QUALITY_LEVELS"][voice_quality]
-                
-                new_channel = await member.guild.create_voice_channel(
-                    name=channel_name,
-                    category=after.channel.category,
-                    bitrate=min(bitrate, member.guild.bitrate_limit),
-                    user_limit=guild_settings.get("default_user_limit", 0)
-                )
-                
-                # Move user to new channel
-                await member.move_to(new_channel)
-                
-                # Set channel permissions
-                await new_channel.set_permissions(
-                    member, 
-                    manage_channels=True,
-                    manage_permissions=True,
-                    mute_members=True,
-                    deafen_members=True
-                )
-                
-                print(f"🎵 Created voice channel '{channel_name}' for {member.display_name}")
-                
-                # Auto-delete setup
-                asyncio.create_task(auto_delete_channel(new_channel, guild_settings))
-                
-            except Exception as e:
-                print(f"❌ Error creating voice channel: {e}")
+        if after.channel and after.channel != before.channel:
+            if after.channel:
+                try:
+                    # Create new voice channel
+                    channel_name = random.choice(CHANNEL_NAMES).format(member.display_name)
+                    new_channel = await member.guild.create_voice_channel(
+                        name=channel_name,
+                        category=after.channel.category,
+                        bitrate=64000,
+                        user_limit= 0
+                    )
+                    
+                    # Move user to new channel
+                    await member.move_to(new_channel)
+                    
+                    print(f"🎵 Created voice channel '{channel_name}' for {member.display_name}")
+                    
+                    # Auto-delete setup
+                    asyncio.create_task(auto_delete_channel(new_channel))
+                    
+                except Exception as e:
+                    print(f"❌ Error creating voice channel: {e}")
 
-    async def auto_delete_channel(channel, guild_settings):
+        # Handle leaving voice channels
+        if before.channel:
+            if before.channel and len(before.channel.members) == 0:
+                try:
+                    await before.channel.delete(reason="Auto-delete: Channel empty")
+                    print(f"🗑️ Auto-deleted empty voice channel: {before.channel.name}")
+                except Exception as e:
+                    print(f"❌ Error deleting channel: {e}")
+
+    async def auto_delete_channel(channel):
         """Auto-delete empty voice channels"""
-        timeout = guild_settings.get("auto_delete_timeout", 300)
+        await asyncio.sleep(300)  # Wait for timeout
         
-        while True:
-            await asyncio.sleep(30)  # Check every 30 seconds
-            
-            try:
-                if len(channel.members) == 0:
-                    await asyncio.sleep(timeout)  # Wait for timeout
-                    if len(channel.members) == 0:  # Double check
-                        await channel.delete(reason="Auto-delete: Channel empty")
-                        print(f"🗑️ Auto-deleted empty voice channel: {channel.name}")
-                        break
-            except discord.NotFound:
-                break  # Channel already deleted
-            except Exception as e:
-                print(f"❌ Error in auto-delete: {e}")
-                break
+        try:
+            if len(channel.members) == 0:
+                await channel.delete(reason="Auto-delete: Channel empty")
+                print(f"🗑️ Auto-deleted empty voice channel: {channel.name}")
+        except discord.NotFound:
+            pass  # Channel already deleted
+        except Exception as e:
+            print(f"❌ Error in auto-delete: {e}")
 
     @bot.event
     async def on_member_join(member):
         """Enhanced member join event"""
-        guild_settings = load_guild_settings(member.guild.id)
         
         # Welcome message
-        welcome_channel_id = guild_settings.get("welcome_channel")
-        if welcome_channel_id and guild_settings.get("welcome_message", True):
-            welcome_channel = bot.get_channel(welcome_channel_id)
+        if member.guild.system_channel:
+            welcome_channel = member.guild.system_channel
             if welcome_channel:
                 embed = create_embed(
                     title=f"🎉 Welcome to {member.guild.name}!",
@@ -142,15 +111,7 @@ def setup_events(bot):
                     pass
         
         # Auto-role
-        auto_role_id = guild_settings.get("auto_role")
-        if auto_role_id:
-            role = member.guild.get_role(auto_role_id)
-            if role:
-                try:
-                    await member.add_roles(role, reason="Auto-role assignment")
-                    print(f"✅ Added auto-role '{role.name}' to {member.display_name}")
-                except Exception as e:
-                    print(f"❌ Error adding auto-role: {e}")
+        
 
     @bot.event
     async def on_command_error(ctx, error):
