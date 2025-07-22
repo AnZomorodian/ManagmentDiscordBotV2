@@ -1,6 +1,8 @@
+
 import discord
 from discord.ext import commands
 import random
+import asyncio
 from utils.helpers import create_embed
 
 def setup_fun_commands(bot):
@@ -60,19 +62,19 @@ def setup_fun_commands(bot):
     async def flip_coin(ctx):
         """Flip a coin"""
         result = random.choice(['Heads', 'Tails'])
-        emoji = '👑' if result == 'Heads' else '🪙'
-
+        emoji = "🪙" if result == "Heads" else "🔄"
+        
         embed = create_embed(
-            title="🪙 Coin Flip",
-            description=f"{emoji} **{result}!**",
+            title=f"{emoji} Coin Flip",
+            description=f"🎯 **Result:** {result}",
             color="info"
         )
-
+        
         await ctx.send(embed=embed)
 
-    @bot.command(name='8ball')
+    @bot.command(name='8ball', aliases=['eightball', 'magic8'])
     async def magic_8ball(ctx, *, question=None):
-        """Magic 8-ball"""
+        """Ask the magic 8-ball a question"""
         if not question:
             embed = create_embed(
                 title="❌ No Question",
@@ -83,19 +85,55 @@ def setup_fun_commands(bot):
             return
 
         responses = [
-            "Yes", "No", "Maybe", "Definitely", "Absolutely not",
-            "Ask again later", "Very likely", "Unlikely", "Certainly",
-            "Don't count on it", "Signs point to yes", "My sources say no"
+            "🟢 It is certain", "🟢 Without a doubt", "🟢 Yes definitely",
+            "🟢 You may rely on it", "🟢 As I see it, yes", "🟢 Most likely",
+            "🟢 Outlook good", "🟢 Yes", "🟢 Signs point to yes",
+            "🟡 Reply hazy, try again", "🟡 Ask again later", "🟡 Better not tell you now",
+            "🟡 Cannot predict now", "🟡 Concentrate and ask again",
+            "🔴 Don't count on it", "🔴 My reply is no", "🔴 My sources say no",
+            "🔴 Outlook not so good", "🔴 Very doubtful"
         ]
 
         answer = random.choice(responses)
-
+        
         embed = create_embed(
             title="🎱 Magic 8-Ball",
             description=f"**Question:** {question}\n**Answer:** {answer}",
             color="info"
         )
-
+        
         await ctx.send(embed=embed)
 
-    print("🎮 Fun commands loaded")
+    @bot.command(name='say', aliases=['echo'])
+    @commands.has_permissions(manage_messages=True)
+    async def say_command(ctx, *, message):
+        """Make the bot say something"""
+        try:
+            await ctx.message.delete()
+            await ctx.send(message)
+        except discord.Forbidden:
+            embed = create_embed(
+                title="❌ Missing Permissions",
+                description="I don't have permission to delete messages!",
+                color="error"
+            )
+            await ctx.send(embed=embed)
+
+    @bot.command(name='embed')
+    @commands.has_permissions(manage_messages=True)
+    async def embed_command(ctx, *, content):
+        """Send a message in an embed"""
+        embed = create_embed(
+            title="📝 Message",
+            description=content,
+            color="info"
+        )
+        
+        try:
+            await ctx.message.delete()
+        except:
+            pass
+            
+        await ctx.send(embed=embed)
+
+    print("🎪 Fun commands loaded successfully")

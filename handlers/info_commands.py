@@ -1,8 +1,8 @@
+
 import discord
-import datetime
 from discord.ext import commands
+import time
 from utils.helpers import create_embed
-from utils.database import get_user_stats, created_channels, user_activity
 
 def setup_info_commands(bot):
     """Setup information commands"""
@@ -35,91 +35,140 @@ def setup_info_commands(bot):
 
         await ctx.send(embed=embed)
 
-    @bot.command(name='mystats', aliases=['stats', 'me'])
-    async def my_stats(ctx):
-        """Show your personal bot statistics"""
-        from utils.database import update_user_command_stats
-
-        update_user_command_stats(ctx.author.id)
-        stats = get_user_stats(ctx.author.id)
+    @bot.command(name='userinfo', aliases=['ui', 'user'])
+    async def user_info(ctx, member: discord.Member = None):
+        """User information"""
+        if member is None:
+            member = ctx.author
 
         embed = create_embed(
-            title=f"📊 {ctx.author.display_name}'s Statistics",
-            description="Your Amazing Management Bot activity",
+            title=f"👤 {member.display_name}",
+            description=f"User information for {member.mention}",
             color="info",
-            thumbnail=ctx.author.display_avatar.url
+            thumbnail=member.display_avatar.url
         )
 
-        embed.add_field(name="🎵 Channels Created", value=f"{stats['channels_created']:,}", inline=True)
-        embed.add_field(name="⚡ Commands Used", value=f"{stats['commands_used']:,}", inline=True)
-        embed.add_field(name="📨 Voice Joins", value=f"{stats['voice_joins']:,}", inline=True)
+        embed.add_field(name="📝 Username", value=f"{member.name}#{member.discriminator}", inline=True)
+        embed.add_field(name="🆔 User ID", value=member.id, inline=True)
+        embed.add_field(name="🤖 Bot", value="Yes" if member.bot else "No", inline=True)
+
+        created_at = discord.utils.format_dt(member.created_at, style='F')
+        joined_at = discord.utils.format_dt(member.joined_at, style='F')
+        
+        embed.add_field(name="📅 Account Created", value=created_at, inline=True)
+        embed.add_field(name="📥 Joined Server", value=joined_at, inline=True)
+        embed.add_field(name="📊 Status", value=str(member.status).title(), inline=True)
+
+        if member.roles[1:]:  # Exclude @everyone role
+            roles = [role.mention for role in member.roles[1:]]
+            if len(roles) <= 10:
+                embed.add_field(name="🎭 Roles", value=" ".join(roles), inline=False)
+            else:
+                embed.add_field(name="🎭 Roles", value=f"{len(roles)} roles", inline=False)
 
         await ctx.send(embed=embed)
 
-    @bot.command(name='botstats')
+    @bot.command(name='botstats', aliases=['stats', 'botinfo'])
     async def bot_stats(ctx):
-        """Bot performance statistics"""
+        """Bot statistics and information"""
         embed = create_embed(
-            title="🤖 Management Bot - Stats",
-            description="Bot performance metrics",
-            color="info"
+            title="🤖 Bot Statistics",
+            description="Amazing Management Bot v3.1",
+            color="info",
+            thumbnail=bot.user.display_avatar.url
         )
 
+        # Basic stats
+        total_members = sum(guild.member_count for guild in bot.guilds)
         embed.add_field(name="🌐 Servers", value=f"{len(bot.guilds):,}", inline=True)
-        embed.add_field(name="👥 Total Users", value=f"{sum(guild.member_count for guild in bot.guilds):,}", inline=True)
-        embed.add_field(name="⚡ Latency", value=f"{round(bot.latency * 1000)}ms", inline=True)
+        embed.add_field(name="👥 Total Members", value=f"{total_members:,}", inline=True)
+        embed.add_field(name="📡 Latency", value=f"{round(bot.latency * 1000)}ms", inline=True)
 
-        embed.add_field(name="🎵 Active Channels", value=f"{len(created_channels):,}", inline=True)
-        embed.add_field(name="🚀 Version", value="v3.1", inline=True)
+        # Commands
+        embed.add_field(name="⚡ Commands", value=f"{len(bot.commands)}", inline=True)
+        embed.add_field(name="🎭 Events", value="7 Active", inline=True)
+        embed.add_field(name="🔧 Version", value="v3.1", inline=True)
 
         await ctx.send(embed=embed)
 
     @bot.command(name='help', aliases=['h', 'commands'])
-    async def help_command(ctx):
-        """Help command"""
-        is_admin = ctx.author.guild_permissions.administrator
+    async def help_command(ctx, category=None):
+        """Show help information"""
+        if category is None:
+            embed = create_embed(
+                title="📚 Amazing Management Bot - Help",
+                description="Use `!help <category>` for specific command categories",
+                color="info"
+            )
 
-        embed = create_embed(
-            title="🤖 Amazing Management Bot v3.1 - Commands",
-            description=f"🚀 **Bot Commands**\n{'👑 **ADMINISTRATOR ACCESS**' if is_admin else '👤 **USER ACCESS**'}",
-            color="admin" if is_admin else "info"
-        )
-
-        if is_admin:
             embed.add_field(
-                name="👑 **ADMIN COMMANDS**",
-                value=(
-                    "• `!setup` - Bot configuration\n"
-                    "• `!setwelcome #channel` - Welcome channel\n"
-                    "• `!setlogs #channel` - Log channel\n"
-                    "• `!settrigger #voice` - Voice trigger\n"
-                    "• `!purge <amount>` - Delete messages"
-                ),
+                name="📊 Information Commands",
+                value="`!help info` - Server & user information",
+                inline=False
+            )
+            embed.add_field(
+                name="👑 Admin Commands", 
+                value="`!help admin` - Administrative tools",
+                inline=False
+            )
+            embed.add_field(
+                name="🛡️ Moderation Commands",
+                value="`!help mod` - Moderation tools",
+                inline=False
+            )
+            embed.add_field(
+                name="🎪 Fun Commands",
+                value="`!help fun` - Entertainment & games",
                 inline=False
             )
 
-        embed.add_field(
-            name="📊 **INFORMATION**",
-            value=(
-                "• `!serverinfo` - Server statistics\n"
-                "• `!mystats` - Your statistics\n"
-                "• `!botstats` - Bot performance\n"
-                "• `!userinfo @user` - User info"
-            ),
-            inline=False
-        )
+        elif category.lower() in ['info', 'information']:
+            embed = create_embed(
+                title="📊 Information Commands",
+                description="Server and user information commands",
+                color="info"
+            )
+            embed.add_field(name="!serverinfo", value="Show server information", inline=False)
+            embed.add_field(name="!userinfo [@user]", value="Show user information", inline=False)
+            embed.add_field(name="!botstats", value="Show bot statistics", inline=False)
 
-        embed.add_field(
-            name="🎪 **FUN COMMANDS**",
-            value=(
-                "• `!ping` - Check responsiveness\n"
-                "• `!roll 6` - Roll dice\n"
-                "• `!8ball <question>` - Magic 8-ball\n"
-                "• `!flip` - Coin flip"
-            ),
-            inline=False
-        )
+        elif category.lower() in ['admin', 'administrator']:
+            embed = create_embed(
+                title="👑 Admin Commands",
+                description="Administrative commands (Admin only)",
+                color="admin"
+            )
+            embed.add_field(name="!setup", value="Complete bot setup", inline=False)
+            embed.add_field(name="!settrigger #channel", value="Set voice trigger channel", inline=False)
+
+        elif category.lower() in ['mod', 'moderation']:
+            embed = create_embed(
+                title="🛡️ Moderation Commands", 
+                description="Moderation tools (Manage Messages perm required)",
+                color="warning"
+            )
+            embed.add_field(name="!clear [amount]", value="Delete messages", inline=False)
+            embed.add_field(name="!kick @user [reason]", value="Kick a user", inline=False)
+            embed.add_field(name="!ban @user [reason]", value="Ban a user", inline=False)
+
+        elif category.lower() in ['fun', 'entertainment']:
+            embed = create_embed(
+                title="🎪 Fun Commands",
+                description="Entertainment and game commands",
+                color="success"
+            )
+            embed.add_field(name="!ping", value="Check bot latency", inline=False)
+            embed.add_field(name="!roll [sides]", value="Roll a dice", inline=False)
+            embed.add_field(name="!flip", value="Flip a coin", inline=False)
+            embed.add_field(name="!8ball <question>", value="Ask the magic 8-ball", inline=False)
+
+        else:
+            embed = create_embed(
+                title="❌ Invalid Category",
+                description="Available categories: `info`, `admin`, `mod`, `fun`",
+                color="error"
+            )
 
         await ctx.send(embed=embed)
 
-    print("📊 Info commands loaded")
+    print("📊 Info commands loaded successfully")

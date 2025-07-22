@@ -50,42 +50,25 @@ def setup_admin_commands(bot):
     @bot.command(name='setwelcome')
     @has_admin_permissions()
     async def set_welcome_channel(ctx, channel: discord.TextChannel):
-        """Set welcome channel"""
+        """Set welcome message channel"""
         embed = create_embed(
             title="✅ Welcome Channel Set",
-            description=f"Welcome messages will be sent to {channel.mention}",
+            description=f"{channel.mention} is now the welcome channel!",
             color="success"
         )
+
         await ctx.send(embed=embed)
 
     @bot.command(name='setlogs')
     @has_admin_permissions()
     async def set_log_channel(ctx, channel: discord.TextChannel):
-        """Set log channel"""
+        """Set moderation log channel"""
         embed = create_embed(
             title="✅ Log Channel Set",
-            description=f"Moderation logs will be sent to {channel.mention}",
+            description=f"{channel.mention} is now the moderation log channel!",
             color="success"
         )
+
         await ctx.send(embed=embed)
 
-    @bot.command(name='purge')
-    @has_admin_permissions()
-    async def purge_messages(ctx, amount: int):
-        """Delete messages"""
-        if amount > 100:
-            amount = 100
-
-        deleted = await ctx.channel.purge(limit=amount + 1)
-
-        embed = create_embed(
-            title="🗑️ Messages Deleted",
-            description=f"Deleted {len(deleted) - 1} messages",
-            color="success"
-        )
-
-        msg = await ctx.send(embed=embed)
-        await asyncio.sleep(3)
-        await msg.delete()
-
-    print("👑 Admin commands loaded")
+    print("👑 Admin commands loaded successfully")
