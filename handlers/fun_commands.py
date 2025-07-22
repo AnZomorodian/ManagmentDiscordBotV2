@@ -99,11 +99,8 @@ def setup_fun_commands(bot):
         await ctx.send(embed=embed)
 
     print("🎮 Fun commands loaded")
-import discord
-import random
-import asyncio
-from utils.helpers import create_embed
-from utils.database import get_user_stats
+
+# Clean implementation without duplicates
 
 def setup_fun_commands(bot):
     """Setup fun and entertainment commands"""
@@ -248,41 +245,7 @@ def setup_fun_commands(bot):
         
         await ctx.send(embed=embed)
 
-    @bot.command(name='mystats', aliases=['stats', 'me'])
-    async def user_stats(ctx):
-        """Show your personal bot statistics"""
-        user_stats = get_user_stats(ctx.author.id)
-        
-        embed = create_embed(
-            title=f"📊 {ctx.author.display_name}'s Statistics",
-            description="Your Amazing Management Bot activity",
-            color="info",
-            thumbnail=ctx.author.display_avatar.url
-        )
-        
-        embed.add_field(name="🎵 Channels Created", value=f"{user_stats['channels_created']:,}", inline=True)
-        embed.add_field(name="⌚ Total Voice Time", value=f"{user_stats['total_time']} min", inline=True)
-        embed.add_field(name="⚡ Commands Used", value=f"{user_stats['commands_used']:,}", inline=True)
-        
-        # Achievements system
-        achievements = []
-        if user_stats['channels_created'] >= 10:
-            achievements.append("🏠 Channel Builder")
-        if user_stats['channels_created'] >= 50:
-            achievements.append("🏗️ Architect")  
-        if user_stats['commands_used'] >= 100:
-            achievements.append("⚡ Power User")
-        if user_stats['total_time'] >= 1440:  # 24 hours
-            achievements.append("🎵 Voice Champion")
-            
-        if achievements:
-            embed.add_field(name="🏆 Achievements", value="\n".join(achievements), inline=False)
-        else:
-            embed.add_field(name="🏆 Achievements", value="Keep using the bot to unlock achievements!", inline=False)
-            
-        embed.set_footer(text=f"Member since: {ctx.author.joined_at.strftime('%B %Y') if ctx.author.joined_at else 'Unknown'}")
-        
-        await ctx.send(embed=embed)
+    
 
     @bot.command(name='choose', aliases=['pick'])
     async def choose_option(ctx, *, choices):
