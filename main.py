@@ -12,48 +12,69 @@ bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 
 @bot.event
 async def on_ready():
-    print(f'Bot is ready! Logged in as {bot.user}')
-    print(f'Bot is in {len(bot.guilds)} servers')
+    print(f'🤖 Bot is ready! Logged in as {bot.user}')
+    print(f'🌐 Bot is in {len(bot.guilds)} servers')
+    
+    # Set bot status
+    activity = discord.Activity(type=discord.ActivityType.listening, name="for voice channels | !help")
+    await bot.change_presence(activity=activity, status=discord.Status.online)
 
 @bot.event
 async def on_voice_state_update(member, before, after):
-    # Check if the member joined a voice channel
+    # Skip if it's a bot
+    if member.bot:
+        return
+    
+    # Check if the member joined a voice channel (and wasn't in one before)
     if after.channel and not before.channel:
-        # Create a new voice channel for the user
-        guild = member.guild
-        category = after.channel.category
-        
-        # Create a new voice channel with the user's name
-        new_channel = await guild.create_voice_channel(
-            name=f"{member.display_name}'s Channel",
-            category=category,
-            user_limit=10
-        )
-        
-        # Move the user to the new channel
-        await member.move_to(new_channel)
-        
-        # Delete the channel when it becomes empty
-        def check_empty():
-            return len(new_channel.members) == 0
-        
-        # Wait for the channel to become empty, then delete it
-        bot.loop.create_task(wait_and_delete_channel(new_channel))
+        try:
+            guild = member.guild
+            category = after.channel.category
+            
+            # Create a new voice channel with the user's name
+            new_channel = await guild.create_voice_channel(
+                name=f"🎵 {member.display_name}'s Room",
+                category=category,
+                user_limit=10
+            )
+            
+            # Move the user to the new channel
+            await member.move_to(new_channel)
+            print(f"✅ Created voice channel for {member.display_name}")
+            
+            # Start the cleanup task
+            bot.loop.create_task(wait_and_delete_channel(new_channel))
+            
+        except discord.Forbidden:
+            print(f"❌ Missing permissions to create voice channel for {member.display_name}")
+        except discord.HTTPException as e:
+            print(f"❌ Failed to create voice channel: {e}")
+        except Exception as e:
+            print(f"⚠️ Unexpected error in voice state update: {e}")
 
 async def wait_and_delete_channel(channel):
     """Wait for a voice channel to become empty, then delete it"""
+    import asyncio
     while True:
-        await discord.utils.sleep_until(discord.utils.utcnow().replace(second=0, microsecond=0) + discord.timedelta(seconds=30))
-        if len(channel.members) == 0:
-            try:
+        await asyncio.sleep(30)  # Check every 30 seconds
+        try:
+            # Refresh channel object to get current members
+            channel = bot.get_channel(channel.id)
+            if not channel:
+                break  # Channel no longer exists
+            
+            if len(channel.members) == 0:
                 await channel.delete()
-                print(f"Deleted empty channel: {channel.name}")
+                print(f"✅ Deleted empty channel: {channel.name}")
                 break
-            except discord.NotFound:
-                break  # Channel already deleted
-            except discord.Forbidden:
-                print(f"No permission to delete channel: {channel.name}")
-                break
+        except discord.NotFound:
+            break  # Channel already deleted
+        except discord.Forbidden:
+            print(f"❌ No permission to delete channel: {channel.name}")
+            break
+        except Exception as e:
+            print(f"⚠️ Error managing channel {channel.name}: {e}")
+            break
 
 @bot.command(name='serverinfo')
 async def server_info(ctx):
@@ -111,28 +132,37 @@ async def server_info(ctx):
 async def help_command(ctx):
     """Display help information"""
     embed = discord.Embed(
-        title="🤖 Bot Commands",
-        description="Here are the available commands:",
-        color=discord.Color.green()
+        title="🤖 Amazing Discord Bot - Help",
+        description="Welcome! Here's what I can do for you:",
+        color=discord.Color.purple(),
+        timestamp=discord.utils.utcnow()
     )
     
     embed.add_field(
-        name="!serverinfo",
-        value="Get detailed information about this server",
+        name="📊 `!serverinfo`",
+        value="Get detailed information about this server including member count, channels, and more!",
         inline=False
     )
     
     embed.add_field(
-        name="🎵 Voice Channel Feature",
-        value="Join any voice channel and I'll create a personal channel for you!",
+        name="🎵 **Auto Voice Channels**",
+        value="Join any voice channel and I'll automatically create a personal room for you! The room will be deleted when empty.",
         inline=False
     )
     
     embed.add_field(
-        name="!help",
+        name="❓ `!help`",
         value="Show this help message",
         inline=False
     )
+    
+    embed.add_field(
+        name="💡 **Tips**",
+        value="• Voice channels are auto-managed\n• Personal rooms auto-delete when empty\n• All commands work in any text channel",
+        inline=False
+    )
+    
+    embed.set_footer(text=f"Requested by {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
     
     await ctx.send(embed=embed)
 
