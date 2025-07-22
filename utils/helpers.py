@@ -1,102 +1,112 @@
-
 import discord
 import asyncio
-import datetime
 import random
-import os
-from dotenv import load_dotenv
-from config.settings import BOT_ACTIVITIES, VOICE_SETTINGS, COLORS
-from discord.ext import commands
+from config.settings import EMBED_COLORS, STATUS_MESSAGES, BOT_VERSION
 
-# Load environment variables
-load_dotenv()
-
-def validate_environment():
-    """Enhanced environment validation"""
+def create_embed(title, description="", color="primary", thumbnail=None, footer=None):
+    """Create a standardized embed with consistent styling"""
     try:
-        token = os.getenv('DISCORD_TOKEN')
-        if not token:
-            print("❌ DISCORD_TOKEN not found in .env file!")
-            print("💡 Please create a .env file with:")
-            print("   DISCORD_TOKEN=your_bot_token_here")
-            return False
-            
-        if len(token) < 50:
-            print("❌ Discord token appears to be invalid (too short)")
-            return False
-            
-        print("✅ Discord token found and validated")
-        return True
-        
+        # Get color value
+        if isinstance(color, str):
+            color_value = EMBED_COLORS.get(color, EMBED_COLORS['primary'])
+        else:
+            color_value = color
+
+        embed = discord.Embed(
+            title=title,
+            description=description,
+            color=color_value
+        )
+
+        if thumbnail:
+            embed.set_thumbnail(url=thumbnail)
+
+        if footer:
+            embed.set_footer(text=footer)
+        else:
+            embed.set_footer(text=f"Amazing Bot v{BOT_VERSION}")
+
+        return embed
+
     except Exception as e:
-        print(f"❌ Environment validation error: {e}")
-        return False
-
-def create_embed(title, description, color="info", thumbnail=None, footer=None):
-    """Create a standardized embed with enhanced styling"""
-    embed = discord.Embed(
-        title=title,
-        description=description,
-        color=COLORS.get(color, COLORS["info"]),
-        timestamp=datetime.datetime.utcnow()
-    )
-    
-    if thumbnail:
-        embed.set_thumbnail(url=thumbnail)
-    
-    if footer:
-        embed.set_footer(text=footer)
-    else:
-        embed.set_footer(text="Amazing Management Bot v3.1 | Powered by .env security")
-    
-    return embed
-
-def format_uptime(uptime_seconds):
-    """Format uptime in a readable format"""
-    days = uptime_seconds // 86400
-    hours = (uptime_seconds % 86400) // 3600
-    minutes = (uptime_seconds % 3600) // 60
-    seconds = uptime_seconds % 60
-    
-    if days > 0:
-        return f"{int(days)}d {int(hours)}h {int(minutes)}m"
-    elif hours > 0:
-        return f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
-    else:
-        return f"{int(minutes)}m {int(seconds)}s"
-
-def get_voice_quality_name(bitrate):
-    """Get voice quality name based on bitrate"""
-    for quality, rate in VOICE_SETTINGS["VOICE_QUALITY_LEVELS"].items():
-        if bitrate <= rate:
-            return quality.title()
-    return "Premium+"
+        print(f"Error creating embed: {e}")
+        # Return basic embed as fallback
+        return discord.Embed(
+            title=title,
+            description=description,
+            color=0x0099ff
+        )
 
 async def setup_bot_status(bot):
-    """Setup rotating bot status with environment awareness"""
-    await bot.wait_until_ready()
-    
+    """Rotate bot status messages"""
     while not bot.is_closed():
         try:
-            activity_data = random.choice(BOT_ACTIVITIES)
-            activity_type = getattr(discord.ActivityType, activity_data["type"])
-            activity_name = activity_data["name"]
-            
-            # Dynamic status with server count
-            if "{}" in activity_name:
-                activity_name = activity_name.format(len(bot.guilds))
-            
-            activity = discord.Activity(type=activity_type, name=activity_name)
+            status_message = random.choice(STATUS_MESSAGES)
             await bot.change_presence(
-                status=discord.Status.online,
-                activity=activity
+                activity=discord.Activity(
+                    type=discord.ActivityType.watching,
+                    name=status_message
+                ),
+                status=discord.Status.online
             )
-            
             await asyncio.sleep(300)  # Change every 5 minutes
-            
         except Exception as e:
-            print(f"❌ Status update error: {e}")
-            await asyncio.sleep(60)  # Retry in 1 minute
+            print(f"Error updating status: {e}")
+            await asyncio.sleep(60)
+
+def validate_environment():
+    """Validate environment variables"""
+    import os
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    token = os.getenv('DISCORD_TOKEN')
+
+    if not token:
+        print("❌ DISCORD_TOKEN not found in .env file!")
+        return False
+
+    if len(token) < 50:
+        print("❌ Invalid Discord token format!")
+        return False
+
+    print("✅ Token validation: ✅ Valid")
+    return True
+
+async def log_action(guild, action, details):
+    """Log moderation actions"""
+    try:
+        print(f"🛡️ [MODERATION] {guild.name}: {action} - {details}")
+    except Exception as e:
+        print(f"Error logging action: {e}")
+
+def format_time(seconds):
+    """Format seconds into readable time"""
+    if seconds < 60:
+        return f"{seconds}s"
+    elif seconds < 3600:
+        return f"{seconds // 60}m {seconds % 60}s"
+    else:
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        return f"{hours}h {minutes}m"
+
+def get_member_status(member):
+    """Get formatted member status"""
+    status_emojis = {
+        discord.Status.online: "🟢",
+        discord.Status.idle: "🟡",
+        discord.Status.dnd: "🔴",
+        discord.Status.offline: "⚫"
+    }
+    return status_emojis.get(member.status, "⚫")
+
+import os
+import os.sys
+import datetime
+from discord.ext import commands
+from dotenv import load_dotenv
+from config.settings import BOT_ACTIVITIES, VOICE_SETTINGS, COLORS
 
 def has_admin_permissions():
     """Decorator to check if user has admin permissions"""
@@ -118,19 +128,6 @@ def has_mod_permissions():
             ctx.author.guild_permissions.administrator
         )
     return commands.check(predicate)
-
-def log_action(action, user, target=None, reason=None):
-    """Log moderation actions"""
-    timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-    log_entry = f"[{timestamp}] {action} by {user}"
-    
-    if target:
-        log_entry += f" on {target}"
-    if reason:
-        log_entry += f" - Reason: {reason}"
-    
-    print(f"📝 {log_entry}")
-    return log_entry
 
 async def safe_send(ctx, content=None, embed=None, delete_after=None):
     """Safely send messages with error handling"""

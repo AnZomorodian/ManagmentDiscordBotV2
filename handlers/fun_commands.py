@@ -2,15 +2,14 @@
 import discord
 from discord.ext import commands
 import random
-import asyncio
 from utils.helpers import create_embed
 
 def setup_fun_commands(bot):
-    """Setup fun commands"""
+    """Setup fun and entertainment commands"""
 
     @bot.command(name='ping')
     async def ping(ctx):
-        """Check bot latency"""
+        """Check bot latency and status"""
         latency = round(bot.latency * 1000)
 
         if latency < 100:
@@ -25,7 +24,7 @@ def setup_fun_commands(bot):
 
         embed = create_embed(
             title="🏓 Pong!",
-            description=f"Bot latency: **{latency}ms**\n{status}",
+            description=f"**Bot Latency:** {latency}ms\n**Status:** {status}\n**Response Time:** ⚡ Fast",
             color=color
         )
 
@@ -33,26 +32,48 @@ def setup_fun_commands(bot):
 
     @bot.command(name='roll')
     async def roll_dice(ctx, dice="6"):
-        """Roll dice"""
+        """Roll dice with customizable sides"""
         try:
-            sides = int(dice)
-            if sides < 2:
-                sides = 6
-            if sides > 100:
-                sides = 100
+            # Handle multiple dice (e.g., 2d6)
+            if 'd' in dice.lower():
+                parts = dice.lower().split('d')
+                if len(parts) == 2:
+                    num_dice = int(parts[0]) if parts[0] else 1
+                    sides = int(parts[1])
+                    
+                    if num_dice > 10:
+                        num_dice = 10
+                    if sides > 100:
+                        sides = 100
+                    
+                    results = [random.randint(1, sides) for _ in range(num_dice)]
+                    total = sum(results)
+                    
+                    embed = create_embed(
+                        title="🎲 Dice Roll",
+                        description=f"**Rolled:** {num_dice}d{sides}\n**Results:** {', '.join(map(str, results))}\n**Total:** {total}",
+                        color="info"
+                    )
+                else:
+                    raise ValueError
+            else:
+                sides = int(dice)
+                if sides < 2:
+                    sides = 6
+                if sides > 100:
+                    sides = 100
 
-            result = random.randint(1, sides)
-
-            embed = create_embed(
-                title="🎲 Dice Roll",
-                description=f"🎯 **You rolled:** {result}\n📊 **Range:** 1-{sides}",
-                color="info"
-            )
+                result = random.randint(1, sides)
+                embed = create_embed(
+                    title="🎲 Dice Roll",
+                    description=f"🎯 **You rolled:** {result}\n📊 **Range:** 1-{sides}",
+                    color="info"
+                )
 
         except ValueError:
             embed = create_embed(
                 title="❌ Invalid Input",
-                description="Please provide a valid number!\nExample: `!roll 20`",
+                description="**Examples:**\n`!roll 20` - Roll 1d20\n`!roll 3d6` - Roll 3d6\n`!roll` - Roll 1d6",
                 color="error"
             )
 
@@ -66,7 +87,7 @@ def setup_fun_commands(bot):
         
         embed = create_embed(
             title=f"{emoji} Coin Flip",
-            description=f"🎯 **Result:** {result}",
+            description=f"🎯 **Result:** {result}\n🎰 **Chance:** 50/50",
             color="info"
         )
         
@@ -78,7 +99,7 @@ def setup_fun_commands(bot):
         if not question:
             embed = create_embed(
                 title="❌ No Question",
-                description="Please ask a question!\nExample: `!8ball Will it rain today?`",
+                description="Please ask a question!\n**Example:** `!8ball Will it rain today?`",
                 color="error"
             )
             await ctx.send(embed=embed)
@@ -90,50 +111,64 @@ def setup_fun_commands(bot):
             "🟢 Outlook good", "🟢 Yes", "🟢 Signs point to yes",
             "🟡 Reply hazy, try again", "🟡 Ask again later", "🟡 Better not tell you now",
             "🟡 Cannot predict now", "🟡 Concentrate and ask again",
-            "🔴 Don't count on it", "🔴 My reply is no", "🔴 My sources say no",
-            "🔴 Outlook not so good", "🔴 Very doubtful"
+            "🔴 Don't count on it", "🔴 My reply is no", "🔴 Outlook not so good",
+            "🔴 Very doubtful", "🔴 My sources say no"
         ]
 
-        answer = random.choice(responses)
+        response = random.choice(responses)
         
         embed = create_embed(
             title="🎱 Magic 8-Ball",
-            description=f"**Question:** {question}\n**Answer:** {answer}",
+            description=f"**Question:** {question}\n**Answer:** {response}",
             color="info"
         )
         
         await ctx.send(embed=embed)
 
-    @bot.command(name='say', aliases=['echo'])
-    @commands.has_permissions(manage_messages=True)
-    async def say_command(ctx, *, message):
-        """Make the bot say something"""
-        try:
-            await ctx.message.delete()
-            await ctx.send(message)
-        except discord.Forbidden:
+    @bot.command(name='choose', aliases=['pick', 'select'])
+    async def choose_option(ctx, *options):
+        """Choose randomly from given options"""
+        if len(options) < 2:
             embed = create_embed(
-                title="❌ Missing Permissions",
-                description="I don't have permission to delete messages!",
+                title="❌ Not Enough Options",
+                description="Please provide at least 2 options!\n**Example:** `!choose pizza pasta salad`",
                 color="error"
             )
             await ctx.send(embed=embed)
+            return
 
-    @bot.command(name='embed')
-    @commands.has_permissions(manage_messages=True)
-    async def embed_command(ctx, *, content):
-        """Send a message in an embed"""
+        choice = random.choice(options)
+        
         embed = create_embed(
-            title="📝 Message",
-            description=content,
-            color="info"
+            title="🎯 Random Choice",
+            description=f"**Options:** {', '.join(options)}\n**I choose:** **{choice}**",
+            color="success"
         )
         
-        try:
-            await ctx.message.delete()
-        except:
-            pass
-            
+        await ctx.send(embed=embed)
+
+    @bot.command(name='joke')
+    async def random_joke(ctx):
+        """Tell a random programming joke"""
+        jokes = [
+            "Why do programmers prefer dark mode? Because light attracts bugs!",
+            "How many programmers does it take to change a light bulb? None, it's a hardware problem!",
+            "Why do Java developers wear glasses? Because they can't C#!",
+            "A SQL query goes into a bar, walks up to two tables and asks... 'Can I join you?'",
+            "Why did the programmer quit his job? He didn't get arrays!",
+            "What's a programmer's favorite hangout place? Foo Bar!",
+            "Why don't programmers like nature? It has too many bugs!",
+            "How do you comfort a JavaScript bug? You console it!"
+        ]
+        
+        joke = random.choice(jokes)
+        
+        embed = create_embed(
+            title="😂 Random Joke",
+            description=joke,
+            color="success"
+        )
+        
         await ctx.send(embed=embed)
 
     print("🎪 Fun commands loaded successfully")

@@ -1,4 +1,3 @@
-
 import os
 import discord
 from dotenv import load_dotenv
@@ -6,115 +5,62 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Discord Configuration
-TOKEN = os.getenv('DISCORD_TOKEN')
-PREFIX = os.getenv('BOT_PREFIX', '!')
-
 # Bot Configuration
-BOT_VERSION = "3.1"
-BOT_AUTHOR = "Amazing Bot Team"
-BOT_DESCRIPTION = "Professional Discord Management Bot with .env Security"
+TOKEN = os.getenv('DISCORD_TOKEN')
+PREFIXES = ['!', '?', '.']
+BOT_VERSION = "3.2"
 
-# Command Prefixes
-PREFIXES = ['!', '?', '.', PREFIX]
-
-# Discord Intents
-INTENTS = discord.Intents.default()
-INTENTS.message_content = True
-INTENTS.members = True
-INTENTS.voice_states = True
-INTENTS.guilds = True
-INTENTS.guild_messages = True
-
-# Bot Activities for Status Rotation
-BOT_ACTIVITIES = [
-    {"type": "watching", "name": "over {} servers"},
-    {"type": "listening", "name": "your commands"},
-    {"type": "playing", "name": "with Discord API v3.1"},
-    {"type": "watching", "name": "for !help commands"},
-    {"type": "listening", "name": "to community feedback"},
-    {"type": "playing", "name": "Amazing Management v3.1"}
-]
-
-# Color Scheme
-COLORS = {
-    "success": 0x00FF00,
-    "error": 0xFF0000,
-    "warning": 0xFFA500,
-    "info": 0x3498DB,
-    "admin": 0x9B59B6,
-    "mod": 0xE74C3C,
-    "premium": 0xFFD700
-}
+# Enhanced Discord Intents
+INTENTS = discord.Intents.all()
 
 # Voice Channel Settings
 VOICE_SETTINGS = {
-    "VOICE_QUALITY_LEVELS": {
-        "low": 32000,
-        "medium": 64000,
-        "high": 96000,
-        "premium": 128000
-    },
-    "DEFAULT_BITRATE": 64000,
-    "MAX_USER_CHANNELS": 5
+    'auto_delete_timeout': 300,  # 5 minutes
+    'max_user_channels': 3,
+    'default_bitrate': 64000,
+    'max_bitrate': 256000,
+    'default_user_limit': 0
 }
 
-# Fun Channel Names for Auto Voice
+# Channel Names for Auto-Creation
 CHANNEL_NAMES = [
     "{}'s Room",
-    "{}'s Hangout", 
+    "{}'s Hangout",
     "{}'s Space",
-    "{}'s Voice Chat",
-    "{}'s Meeting Room",
-    "{}'s Gaming Room",
-    "{}'s Study Hall",
-    "{}'s Music Room"
+    "{}'s Channel",
+    "{}'s Voice",
+    "{}'s Zone",
+    "{}'s Chat"
 ]
 
-# Security Settings
-SECURITY = {
-    "max_warnings": 3,
-    "auto_ban_threshold": 5,
-    "spam_detection": True,
-    "raid_protection": True,
-    "auto_mod": True,
-    "link_protection": True,
-    "mention_spam_limit": 5,
-    "messages_per_minute": 20
+# Embed Colors
+EMBED_COLORS = {
+    'success': 0x00ff00,
+    'error': 0xff0000,
+    'warning': 0xffff00,
+    'info': 0x00ffff,
+    'primary': 0x0099ff,
+    'secondary': 0x9932cc
 }
 
-# Feature Flags
-FEATURES = {
-    "auto_voice": True,
-    "moderation": True,
-    "welcome_system": True,
-    "statistics": True,
-    "fun_commands": True,
-    "auto_roles": True,
-    "enhanced_security": True
-}
+# Bot Status Messages
+STATUS_MESSAGES = [
+    f"Amazing Bot v{BOT_VERSION}",
+    "Serving multiple servers!",
+    "Type !help for commands",
+    "Managing your Discord!",
+    "🎵 Voice channels ready!"
+]
 
-# Default Guild Settings Template
-DEFAULT_GUILD_SETTINGS = {
-    "auto_voice": True,
-    "welcome_channel": None,
-    "log_channel": None, 
-    "auto_role": None,
-    "banned_words": [],
-    "max_channels_per_user": 3,
-    "trigger_channels": [],
-    "voice_quality": "high",
-    "auto_delete_timeout": 300,
-    "welcome_message": True,
-    "moderation_enabled": True,
-    "prefix": "!",
-    "language": "en"
-}
+def validate_environment():
+    """Validate environment configuration"""
+    if not TOKEN:
+        print("❌ DISCORD_TOKEN not found in environment variables!")
+        return False
 
-# Validation
-if TOKEN:
-    print(f"✅ Configuration loaded successfully from .env")
-    print(f"🔐 Token validation: {'✅ Valid' if len(TOKEN) > 50 else '❌ Invalid'}")
-else:
-    print("❌ DISCORD_TOKEN not found in .env file!")
-    print("💡 Please add your bot token to the .env file")
+    if len(TOKEN) < 50:
+        print("❌ Invalid Discord token format!")
+        return False
+
+    print("✅ Environment validation passed!")
+    return True
