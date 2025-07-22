@@ -67,8 +67,12 @@ def main():
         print("✅ Event handlers registered")
 
         # Setup command handlers
-        setup_commands(bot)
-        print("✅ Command handlers registered")
+        try:
+            setup_commands(bot)
+            print("✅ Command handlers registered")
+        except Exception as e:
+            print(f"❌ Error setting up commands: {e}")
+            return
 
         # Setup status rotation
         asyncio.create_task(setup_bot_status(bot))

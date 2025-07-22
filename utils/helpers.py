@@ -31,7 +31,7 @@ def validate_environment():
         
     except Exception as e:
         print(f"❌ Environment validation error: {e}")
-        return False
+        return Falseeturn False
 
 def create_embed(title, description, color="info", thumbnail=None, footer=None):
     """Create a standardized embed with enhanced styling"""

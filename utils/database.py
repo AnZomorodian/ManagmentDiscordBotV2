@@ -91,7 +91,7 @@ def get_guild_stats():
         "total_voice_time": total_voice_time,
         "active_users": len(user_stats),
         "active_channels": len(created_channels)
-    }id]
+    }
 
 def update_user_command_stats(user_id):
     """Update user command usage statistics"""
