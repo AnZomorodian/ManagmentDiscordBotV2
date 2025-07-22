@@ -52,7 +52,7 @@ def update_user_command_stats(user_id):
     stats = get_user_stats(user_id)
     stats["commands_used"] += 1
     import datetime
-    stats["last_active"] = datetime.datetime.now().isoformat()id]
+    stats["last_active"] = datetime.datetime.now().isoformat()
 
 def add_moderation_log(guild_id, action, moderator, target, reason):
     """Add a moderation log entry"""
@@ -78,3 +78,8 @@ def get_moderation_logs(guild_id, limit=10):
     if guild_id not in moderation_logs:
         return []
     return moderation_logs[guild_id][-limit:]
+
+def save_guild_settings(guild_id, settings):
+    """Save guild settings to local storage"""
+    guild_settings[guild_id] = settings
+    print(f"💾 Settings saved for guild {guild_id}")
