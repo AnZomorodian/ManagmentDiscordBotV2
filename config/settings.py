@@ -1,3 +1,4 @@
+
 import os
 import discord
 from dotenv import load_dotenv
@@ -8,7 +9,7 @@ load_dotenv()
 # Bot Configuration
 TOKEN = os.getenv('DISCORD_TOKEN')
 if not TOKEN:
-    raise ValueError("❌ DISCORD_TOKEN not found in .env file!")
+    raise ValueError("❌ DISCORD_TOKEN not found in .env file! Please add your token to .env")
 
 PREFIXES = ['!', '?', '.']
 INTENTS = discord.Intents.all()
@@ -110,3 +111,11 @@ DEFAULT_GUILD_SETTINGS = {
     "prefix": "!",
     "language": "en"
 }
+
+# Bot Information
+BOT_VERSION = "3.1"
+BOT_AUTHOR = "Amazing Bot Team"
+BOT_DESCRIPTION = "Professional Discord Management Bot with .env Security"
+
+print(f"✅ Configuration loaded successfully from .env")
+print(f"🔐 Token validation: {'✅ Valid' if TOKEN else '❌ Missing'}")

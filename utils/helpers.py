@@ -7,9 +7,31 @@ import os
 from dotenv import load_dotenv
 from config.settings import BOT_ACTIVITIES, VOICE_SETTINGS, COLORS
 from utils.database import load_guild_settings
+from discord.ext import commands
 
 # Load environment variables
 load_dotenv()
+
+def validate_environment():
+    """Enhanced environment validation"""
+    try:
+        token = os.getenv('DISCORD_TOKEN')
+        if not token:
+            print("❌ DISCORD_TOKEN not found in .env file!")
+            print("💡 Please create a .env file with:")
+            print("   DISCORD_TOKEN=your_bot_token_here")
+            return False
+            
+        if len(token) < 50:
+            print("❌ Discord token appears to be invalid (too short)")
+            return False
+            
+        print("✅ Discord token found and validated")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Environment validation error: {e}")
+        return False
 
 def create_embed(title, description, color="info", thumbnail=None, footer=None):
     """Create a standardized embed with enhanced styling"""
@@ -111,21 +133,6 @@ def log_action(action, user, target=None, reason=None):
     print(f"📝 {log_entry}")
     return log_entry
 
-def validate_token():
-    """Validate Discord token format"""
-    token = os.getenv('DISCORD_TOKEN')
-    if not token:
-        return False, "Token not found in environment variables"
-    
-    # Basic token format validation
-    if len(token) < 50:
-        return False, "Token appears to be too short"
-    
-    if not any(char.isdigit() for char in token):
-        return False, "Token should contain numbers"
-    
-    return True, "Token format appears valid"
-
 async def safe_send(ctx, content=None, embed=None, delete_after=None):
     """Safely send messages with error handling"""
     try:
@@ -153,4 +160,24 @@ def get_member_info(member):
         "permissions": [perm for perm, value in member.guild_permissions if value],
         "status": str(member.status),
         "activity": str(member.activity) if member.activity else "None"
+    }
+
+def check_bot_permissions(guild, permissions_list):
+    """Check if bot has required permissions"""
+    bot_member = guild.me
+    missing_perms = []
+    
+    for perm in permissions_list:
+        if not getattr(bot_member.guild_permissions, perm, False):
+            missing_perms.append(perm.replace('_', ' ').title())
+    
+    return missing_perms
+
+def get_environment_info():
+    """Get environment information for debugging"""
+    return {
+        "token_configured": bool(os.getenv('DISCORD_TOKEN')),
+        "env_file_exists": os.path.exists('.env'),
+        "python_version": os.sys.version,
+        "discord_py_version": discord.__version__
     }
