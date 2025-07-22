@@ -4,7 +4,7 @@ from discord.ext import commands
 import asyncio
 import random
 from config.settings import VOICE_SETTINGS, CHANNEL_NAMES, COLORS, DEFAULT_GUILD_SETTINGS
-from utils.database import load_guild_settings, save_guild_settings
+from utils.database import load_guild_settings, save_guild_settings, add_moderation_log
 from utils.helpers import create_embed, log_action
 
 def setup_events(bot):
@@ -186,3 +186,5 @@ def setup_events(bot):
             )
             await ctx.send(embed=embed)
             print(f"❌ Command error: {error}")
+
+    print("🎭 Event handlers loaded successfully")

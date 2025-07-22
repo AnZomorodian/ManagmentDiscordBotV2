@@ -6,7 +6,6 @@ import random
 import os
 from dotenv import load_dotenv
 from config.settings import BOT_ACTIVITIES, VOICE_SETTINGS, COLORS
-from utils.database import load_guild_settings
 from discord.ext import commands
 
 # Load environment variables
@@ -31,7 +30,7 @@ def validate_environment():
         
     except Exception as e:
         print(f"❌ Environment validation error: {e}")
-        return Falseeturn False
+        return False
 
 def create_embed(title, description, color="info", thumbnail=None, footer=None):
     """Create a standardized embed with enhanced styling"""

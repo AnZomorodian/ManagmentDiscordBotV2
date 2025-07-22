@@ -3,84 +3,83 @@ import os
 import discord
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
-# Bot Configuration
+# Discord Configuration
 TOKEN = os.getenv('DISCORD_TOKEN')
-if not TOKEN:
-    raise ValueError("❌ DISCORD_TOKEN not found in .env file! Please add your token to .env")
+PREFIX = os.getenv('BOT_PREFIX', '!')
 
-PREFIXES = ['!', '?', '.']
-INTENTS = discord.Intents.all()
+# Bot Configuration
+BOT_VERSION = "3.1"
+BOT_AUTHOR = "Amazing Bot Team"
+BOT_DESCRIPTION = "Professional Discord Management Bot with .env Security"
+
+# Command Prefixes
+PREFIXES = ['!', '?', '.', PREFIX]
+
+# Discord Intents
+INTENTS = discord.Intents.default()
+INTENTS.message_content = True
+INTENTS.members = True
+INTENTS.voice_states = True
+INTENTS.guilds = True
+INTENTS.guild_messages = True
+
+# Bot Activities for Status Rotation
+BOT_ACTIVITIES = [
+    {"type": "watching", "name": "over {} servers"},
+    {"type": "listening", "name": "your commands"},
+    {"type": "playing", "name": "with Discord API v3.1"},
+    {"type": "watching", "name": "for !help commands"},
+    {"type": "listening", "name": "to community feedback"},
+    {"type": "playing", "name": "Amazing Management v3.1"}
+]
+
+# Color Scheme
+COLORS = {
+    "success": 0x00FF00,
+    "error": 0xFF0000,
+    "warning": 0xFFA500,
+    "info": 0x3498DB,
+    "admin": 0x9B59B6,
+    "mod": 0xE74C3C,
+    "premium": 0xFFD700
+}
 
 # Voice Channel Settings
 VOICE_SETTINGS = {
     "VOICE_QUALITY_LEVELS": {
-        "standard": 64000,    # Standard quality (64kbps)
-        "high": 128000,       # High quality (128kbps)
-        "premium": 256000     # Premium quality (256kbps)
+        "low": 32000,
+        "medium": 64000,
+        "high": 96000,
+        "premium": 128000
     },
-    "DEFAULT_USER_LIMIT": 0,  # 0 = no limit
-    "AUTO_DELETE_TIMEOUT": 300,  # 5 minutes
-    "MAX_CHANNELS_PER_USER": 3
+    "DEFAULT_BITRATE": 64000,
+    "MAX_USER_CHANNELS": 5
 }
 
-# Channel Name Templates
+# Fun Channel Names for Auto Voice
 CHANNEL_NAMES = [
     "{}'s Room",
     "{}'s Hangout", 
-    "{}'s Voice Chat",
     "{}'s Space",
-    "{}'s Channel",
-    "{}'s Lounge",
-    "🎵 {}'s Music Room",
-    "🎮 {}'s Gaming Room",
-    "💬 {}'s Chat Room",
-    "🎯 {}'s Focus Room",
-    "🎨 {}'s Creative Space",
-    "🌙 {}'s Chill Zone",
-    "🎪 {}'s Entertainment Hub",
-    "🏰 {}'s Castle",
-    "🌊 {}'s Wave Room"
+    "{}'s Voice Chat",
+    "{}'s Meeting Room",
+    "{}'s Gaming Room",
+    "{}'s Study Hall",
+    "{}'s Music Room"
 ]
 
-# Magic 8-Ball Responses
-EIGHT_BALL_RESPONSES = [
-    "It is certain", "It is decidedly so", "Without a doubt", "Yes definitely",
-    "You may rely on it", "As I see it, yes", "Most likely", "Outlook good",
-    "Yes", "Signs point to yes", "Reply hazy, try again", "Ask again later",
-    "Better not tell you now", "Cannot predict now", "Concentrate and ask again",
-    "Don't count on it", "My reply is no", "My sources say no",
-    "Outlook not so good", "Very doubtful", "Absolutely not", "The stars say no"
-]
-
-# Embed Colors
-COLORS = {
-    "success": 0x00ff00,   # Green
-    "error": 0xff0000,     # Red  
-    "warning": 0xffff00,   # Yellow
-    "info": 0x00ffff,      # Cyan
-    "admin": 0xff00ff,     # Magenta
-    "voice": 0x9932cc,     # Purple
-    "moderation": 0xff6600, # Orange
-    "fun": 0xff69b4        # Pink
-}
-
-# Bot Status Messages
-BOT_ACTIVITIES = [
-    {"type": "watching", "name": "for administrators | !help"},
-    {"type": "listening", "name": "to server management | !admin"},
-    {"type": "playing", "name": "Amazing Management Bot v3.1 | !setup"},
-    {"type": "competing", "name": "Server Management Excellence | !moderation"},
-    {"type": "watching", "name": "voice channels | !voicesettings"},
-    {"type": "playing", "name": "with secure .env configuration | !botstats"}
-]
-
-# Rate Limiting Settings
-RATE_LIMITS = {
-    "commands_per_minute": 30,
-    "channels_per_hour": 10,
+# Security Settings
+SECURITY = {
+    "max_warnings": 3,
+    "auto_ban_threshold": 5,
+    "spam_detection": True,
+    "raid_protection": True,
+    "auto_mod": True,
+    "link_protection": True,
+    "mention_spam_limit": 5,
     "messages_per_minute": 20
 }
 
@@ -112,10 +111,10 @@ DEFAULT_GUILD_SETTINGS = {
     "language": "en"
 }
 
-# Bot Information
-BOT_VERSION = "3.1"
-BOT_AUTHOR = "Amazing Bot Team"
-BOT_DESCRIPTION = "Professional Discord Management Bot with .env Security"
-
-print(f"✅ Configuration loaded successfully from .env")
-print(f"🔐 Token validation: {'✅ Valid' if TOKEN else '❌ Missing'}")
+# Validation
+if TOKEN:
+    print(f"✅ Configuration loaded successfully from .env")
+    print(f"🔐 Token validation: {'✅ Valid' if len(TOKEN) > 50 else '❌ Invalid'}")
+else:
+    print("❌ DISCORD_TOKEN not found in .env file!")
+    print("💡 Please add your bot token to the .env file")
