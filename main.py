@@ -2,7 +2,7 @@ import os
 import discord
 from discord.ext import commands
 import asyncio
-from config.settings import TOKEN, PREFIXES, INTENTS
+from config.settings import TOKEN, PREFIXES, INTENTS, FEATURES
 from handlers.events import setup_events
 from handlers.commands import setup_commands
 from utils.database import initialize_data
@@ -19,9 +19,12 @@ def main():
     try:
         print("🚀 Starting Amazing Management Bot v3.0...")
         print("🔑 Using embedded token...")
-        print("👑 Admin features enabled...")
-        print("🎵 Smart voice trigger system ready...")
+        print("👑 Admin features enabled..." if FEATURES["moderation"] else "👤 Basic features only...")
+        print("🎵 Smart voice trigger system ready..." if FEATURES["auto_voice"] else "🔇 Voice features disabled...")
+        print("🎪 Fun commands loaded..." if FEATURES["fun_commands"] else "😐 Fun commands disabled...")
+        print("📊 Statistics tracking active..." if FEATURES["statistics"] else "📊 Statistics disabled...")
         print("📁 Modular architecture loaded...")
+        print(f"⚙️  Features: {sum(FEATURES.values())}/{len(FEATURES)} enabled")
 
         # Setup event handlers
         setup_events(bot)

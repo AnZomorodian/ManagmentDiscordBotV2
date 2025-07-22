@@ -40,9 +40,19 @@ def get_user_stats(user_id):
             "total_time": 0,
             "commands_used": 0,
             "last_active": None,
-            "achievements": []
+            "achievements": [],
+            "messages_sent": 0,
+            "voice_joins": 0,
+            "favorite_channel": None
         }
     return user_stats[user_id]
+
+def update_user_command_stats(user_id):
+    """Update user command usage statistics"""
+    stats = get_user_stats(user_id)
+    stats["commands_used"] += 1
+    import datetime
+    stats["last_active"] = datetime.datetime.now().isoformat()id]
 
 def add_moderation_log(guild_id, action, moderator, target, reason):
     """Add a moderation log entry"""

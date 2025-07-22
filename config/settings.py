@@ -68,3 +68,91 @@ COLORS = {
     "moderation": 0xff6600,
     "fun": 0xff69b4
 }
+import os
+import discord
+from discord.ext import commands
+
+# Bot Configuration
+TOKEN = os.getenv('TOKEN')
+PREFIXES = ['!', '?', '.']
+INTENTS = discord.Intents.all()
+
+# Voice Channel Settings
+VOICE_SETTINGS = {
+    "VOICE_QUALITY_LEVELS": {
+        "standard": 64000,    # Standard quality (64kbps)
+        "high": 128000,       # High quality (128kbps)
+        "premium": 256000     # Premium quality (256kbps)
+    },
+    "DEFAULT_USER_LIMIT": 0,  # 0 = no limit
+    "AUTO_DELETE_TIMEOUT": 300,  # 5 minutes
+    "MAX_CHANNELS_PER_USER": 3
+}
+
+# Channel Name Templates
+CHANNEL_NAMES = [
+    "{}'s Room",
+    "{}'s Hangout", 
+    "{}'s Voice Chat",
+    "{}'s Space",
+    "{}'s Channel",
+    "{}'s Lounge",
+    "🎵 {}'s Music Room",
+    "🎮 {}'s Gaming Room",
+    "💬 {}'s Chat Room"
+]
+
+# Embed Colors
+COLORS = {
+    "success": 0x00ff00,   # Green
+    "error": 0xff0000,     # Red  
+    "warning": 0xffff00,   # Yellow
+    "info": 0x00ffff,      # Cyan
+    "admin": 0xff00ff      # Magenta
+}
+
+# Bot Status Messages
+STATUS_MESSAGES = [
+    "🎵 Managing voice channels",
+    "🛡️ Moderating servers", 
+    "📊 Tracking statistics",
+    "🎮 Ready for commands",
+    "🚀 Amazing Management Bot v3.0",
+    "👑 Serving {} servers",
+    "💬 Helping {} users",
+    "⚡ Latency: {}ms"
+]
+
+# Rate Limiting Settings
+RATE_LIMITS = {
+    "commands_per_minute": 30,
+    "channels_per_hour": 10,
+    "messages_per_minute": 20
+}
+
+# Feature Flags
+FEATURES = {
+    "auto_voice": True,
+    "moderation": True,
+    "welcome_system": True,
+    "statistics": True,
+    "fun_commands": True,
+    "auto_roles": True
+}
+
+# Default Guild Settings Template
+DEFAULT_GUILD_SETTINGS = {
+    "auto_voice": True,
+    "welcome_channel": None,
+    "log_channel": None, 
+    "auto_role": None,
+    "banned_words": [],
+    "max_channels_per_user": 3,
+    "trigger_channels": [],
+    "voice_quality": "high",
+    "auto_delete_timeout": 300,
+    "welcome_message": True,
+    "moderation_enabled": True,
+    "prefix": "!",
+    "language": "en"
+}
